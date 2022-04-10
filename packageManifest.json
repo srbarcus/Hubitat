@@ -5,9 +5,9 @@
   "minimumHEVersion": "2.1.9",
   "dateReleased": "2022-04-10",
   "apps": [
-    {
-      "id": "5ad38970-aee8-4e36-b1fd-573a0b09ae94",
-      "name": "YoLink Device Service",
+     {
+      "id": "612fb252-a284-40b4-948a-4f31022e0dac",
+      "name": "YoLink™ Device Service",
       "namespace": "srbarcus",
       "location": "https://raw.githubusercontent.com/srbarcus/Hubitat/master/YoLink_Device_Service.groovy",
       "required": true,
