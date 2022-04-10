@@ -1,12 +1,12 @@
 {
-  "packageName": "YoLink Device Service",
+  "packageName": "YoLinkΓäó Device Service",
   "author": "Steven Barcus",
   "version": "1.0",
   "minimumHEVersion": "2.1.9",
   "dateReleased": "2022-04-10",
   "apps": [
-     {
-      "id": "612fb252-a284-40b4-948a-4f31022e0dac",
+    {
+      "id": "ed876a84-306b-4dab-ad3d-3a698b5b15ee",
       "name": "YoLink™ Device Service",
       "namespace": "srbarcus",
       "location": "https://raw.githubusercontent.com/srbarcus/Hubitat/master/YoLink_Device_Service.groovy",
