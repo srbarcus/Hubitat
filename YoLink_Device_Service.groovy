@@ -26,7 +26,7 @@
 import groovy.json.JsonSlurper
 
 definition(
-    name: "YoLink Device Service",
+    name: "YoLink™ Device Service",
     namespace: "srbarcus",
     author: "Steven Barcus",
     description: "Connects your YoLink™ devices to Hubitat.",
