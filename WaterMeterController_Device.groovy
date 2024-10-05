@@ -14,6 +14,7 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied. 
  * 
  *  0.0.0: ALPHA release
+ *  0.0.1: ALPHA release - Added "Report" message processing
  */
 
 import groovy.json.JsonSlurper
