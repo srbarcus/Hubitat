@@ -18,7 +18,7 @@
 
 import groovy.json.JsonSlurper
 
-def clientVersion() {return "0.0.0"}
+def clientVersion() {return "0.0.1"}
 def copyright() {return "<br>© 2022-" + new Date().format("yyyy") + " Steven Barcus. All rights reserved."}
 def bold(text) {return "<strong>$text</strong>"}
 
@@ -81,7 +81,8 @@ metadata {
         attribute "dailyUsage", "String"
         attribute "temperature", "String"
         attribute "timeZone", "String"
-
+        attribute "screenDuration", "String"
+        attribute "screenMeterUnit", "String"
         }
    }
     
@@ -95,8 +96,6 @@ void setDeviceToken(token) {
  }
 
 void ServiceSetup(Hubitat_dni,homeID,devname,devtype,devtoken,devId) {
-	state.debug = true	
-    
     state.my_dni = Hubitat_dni      
     state.homeID = homeID    
     state.name = devname
@@ -303,8 +302,8 @@ def parseDevice(object) {
     def freezeError = object.data.alarm.freezeError                      //Freeze alarm, Boolean
     def battery = parent.batterylevel(object.data.state.battery)         //Level of device's battery, 0 to 4 means empty to full 
     def powerSupply = object.data.powerSupply                            //Power supply, ["battery","PowerLine"]
-    def valveDelayOn = object.data.valveDelay.on                                   //The remain time of Delay ON;Unit of minute;0 is OFF, Integer
-    def valveDelayOff = object.data.valveDelay.off                                 //The remain time of Delay OFF;Unit of minute;0 is OFF, Integer
+    def valveDelayOn = object.data.valveDelay.on                         //The remain time of Delay ON;Unit of minute;0 is OFF, Integer
+    def valveDelayOff = object.data.valveDelay.off                       //The remain time of Delay OFF;Unit of minute;0 is OFF, Integer
     def openReminder = object.data.attributes.openReminder               //Open remind duration in minute, Integer
     def meterUnit = object.data.attributes.meterUnit                     //Meter screen unit, 0-GAL 1-CCF 2-M3 3-L, Integer
     def alertInterval = object.data.attributes.alertInterval             //Alert interval in minute, Integer
@@ -313,15 +312,15 @@ def parseDevice(object) {
     def autoCloseValve = object.data.attributes.autoCloseValve           //Close valve if leak limit exceeded, Boolean
     def overrunAmountACV = object.data.attributes.overrunAmountACV       //Overrun amount auto close valve, Boolean
     def overrunDurationACV = object.data.attributes.overrunDurationACV   //Overrun duration auto close valve, Boolean
-    def leakPlan = object.data.attributes.leakPlan                 //Leak plan mode, ["on","off","schedule"]
-    def overrunAmount = object.data.attributes.overrunAmount       //Overrun amount in meter unit, Float
-    def overrunDuration = object.data.attributes.overrunDuration   //Overrun duration in minute, Integer
-    def freezeTemp = object.data.attributes.freezeTemp             //Freeze temperature in celsius, Float
-    def amount = object.data.recentUsage.amount                    //Recent usage in meter unit, Integer
-    def duration = object.data.recentUsage.duration                //Recent usage duration in minute, Integer
-    def dailyUsage = object.data.dailyUsage                        //Daily usage in meter unit, Integer
-    def temperature = object.data.temperature                      //Temperature in celsius, Float
-    def firmware = object.data.version.toUpperCase()               //Firmware version  
+    def leakPlan = object.data.attributes.leakPlan                       //Leak plan mode, ["on","off","schedule"]
+    def overrunAmount = object.data.attributes.overrunAmount             //Overrun amount in meter unit, Float
+    def overrunDuration = object.data.attributes.overrunDuration         //Overrun duration in minute, Integer
+    def freezeTemp = object.data.attributes.freezeTemp                   //Freeze temperature in celsius, Float
+    def amount = object.data.recentUsage.amount                          //Recent usage in meter unit, Integer
+    def duration = object.data.recentUsage.duration                      //Recent usage duration in minute, Integer
+    def dailyUsage = object.data.dailyUsage                              //Daily usage in meter unit, Integer
+    def temperature = object.data.temperature                            //Temperature in celsius, Float
+    def firmware = object.data.version.toUpperCase()                     //Firmware version  
     def timeZone = object.data.tz                                        //Timezone of device. -12 ~ 12
          
     
@@ -405,14 +404,111 @@ def void processStateData(payload) {
     def devId = object.deviceId      
     
     if (state.devId == devId) {  // Only handle if message is for me         
-        logDebug("processStateData(${payload})")
+        logDebug("processStateData(${object})")
         
         def child = parent.getChildDevice(state.my_dni)
         def name = child.getLabel()                
         def event = object.event.replace("${state.type}.","")
-        logDebug("Received Message Type: ${event} for: $name")
+        logDebug("Received Message Type: ${event} for: $name")        
         
         switch(event) {
+        case "Report": 
+//{"event":"WaterMeterController.Report","method":"Report","time":1728091761771,"msgid":"1728091761771","data":{"state":{"valve":"close","meter":41467},
+//"alarm":{"openReminder":false,"leak":false,"amountOverrun":false,"durationOverrun":false,"valveError":false,"reminder":false,"freezeError":false},"battery":4,"powerSupply":"battery","version":"0704",
+//"attributes":{"alertInterval":0,"screenDuration":5,"screenMeterUnit":0,"meterUnit":0,"meterStepFactor":10,"leakLimit":500,"leakPlan":"on","overrunAmount":1000,"overrunDuration":240},"recentUsage":{"amount":5,"duration":1},
+//"loraInfo":{"netId":"010201","devNetType":"A","signal":-35,"gatewayId":"d88b4c16040017c8","gateways":4}},"deviceId":"d88b4c010008440d"}        
+            def valve = object.data.state.valve                                  //Valve state, ["close","open"]
+            def meter = object.data.state.meter                                  //Meter reading, Integer
+            def openReminderAlarm = object.data.alarm.openReminder               //Open remind alarm, Boolean
+            def leak = object.data.alarm.leak                                    //Leak alarm, Boolean
+            def amountOverrun = object.data.alarm.amountOverrun                  //Amount overrun alarm, Boolean
+            def durationOverrun = object.data.alarm.durationOverrun              //Duration overrun alarm, Boolean
+            def valveError = object.data.alarm.valveError                        //Valve error alarm, Boolean
+            def reminder = object.data.alarm.reminder                            //Remind repeat, Boolean
+            def freezeError = object.data.alarm.freezeError                      //Freeze alarm, Boolean
+            def battery = parent.batterylevel(object.data.state.battery)         //Level of device's battery, 0 to 4 means empty to full 
+            def powerSupply = object.data.powerSupply                            //Power supply, ["battery","PowerLine"]
+            def alertInterval = object.data.attributes.alertInterval             //Alert interval in minute, Integer
+            def screenDuration = object.data.attributes.screenDuration  
+            def screenMeterUnit = object.data.attributes.screenMeterUnit 
+            def meterUnit = object.data.attributes.meterUnit       
+            def meterStepFactor = object.data.attributes.meterStepFactor         //Meter measurement accuracy, Integer
+            def leakLimit = object.data.attributes.leakLimit                     //Leak limit in meter unit, Float
+            def leakPlan = object.data.attributes.leakPlan                       //Leak plan mode, ["on","off","schedule"]
+            def overrunAmount = object.data.attributes.overrunAmount             //Overrun amount in meter unit, Float
+            def overrunDuration = object.data.attributes.overrunDuration         //Overrun duration in minute, Integer
+            def amount = object.data.recentUsage.amount                          //Recent usage in meter unit, Integer
+            def duration = object.data.recentUsage.duration                      //Recent usage duration in minute, Integer
+            def firmware = object.data.version.toUpperCase()                     //Firmware version  
+            
+            def rssi = object.data.loraInfo.signal
+            fmtSignal(rssi)  
+
+            rememberState("valve", valve)
+            rememberState("meter", meter)
+            rememberState("openReminderAlarm", openReminderAlarm)
+            rememberState("leak", leak)
+            rememberState("amountOverrun", amountOverrun)
+            rememberState("durationOverrun", durationOverrun)
+            rememberState("valveError", valveError)
+            rememberState("reminder", reminder)
+            rememberState("freezeError", freezeError)
+            rememberState("battery", battery)
+            rememberState("powerSupply", powerSupply)
+            rememberState("valveDelayOn", valveDelayOn)
+            rememberState("valveDelayOff", valveDelayOff)
+            rememberState("openReminder", openReminder)            
+            rememberState("screenDuration", screenDuration)
+            rememberState("screenMeterUnit", screenMeterUnit)            
+            rememberState("meterUnit", meterUnit)
+            rememberState("alertInterval", alertInterval)
+            rememberState("meterStepFactor", meterStepFactor)
+            rememberState("leakLimit", leakLimit)
+            rememberState("autoCloseValve", autoCloseValve)
+            rememberState("overrunAmountACV", overrunAmountACV)
+            rememberState("overrunDurationACV", overrunDurationACV)
+            rememberState("leakPlan", leakPlan)
+            rememberState("overrunAmount", overrunAmount)
+            rememberState("overrunDuration", overrunDuration)
+            rememberState("amount", amount)
+            rememberState("duration", duration)            
+            rememberState("firmware", firmware)
+            rememberState("timeZone", timeZone)
+                   
+            logDebug("processStateData() Parsed: " +
+            "valve(${valve}), " +
+            "meter(${meter}), " + 
+            "openReminder(${openReminder}), " +
+            "leak(${leak}), " +
+            "amountOverrun(${amountOverrun}), " +
+            "durationOverrun(${durationOverrun}), " +
+            "valveError(${valveError}), " +
+            "reminder(${reminder}), " +
+            "freezeError(${freezeError}), " +
+            "battery(${battery}), " +
+            "powerSupply(${powerSupply}), " +
+            "openReminder(${openReminder}), " +
+            "screenDuration(${screenDuration}), " +
+            "screenMeterUnit(${screenMeterUnit}), " +
+            "meterUnit(${meterUnit}), " +
+            "alertInterval(${alertInterval}), " +
+            "meterStepFactor(${meterStepFactor}), " +
+            "leakLimit(${leakLimit}), " +
+            "autoCloseValve(${autoCloseValve}), " +
+            "overrunAmountACV(${overrunAmountACV}), " +
+            "overrunDurationACV(${overrunDurationACV}), " +
+            "leakPlan(${leakPlan}), " +
+            "overrunAmount(${overrunAmount}), " +
+            "overrunDuration(${overrunDuration}), " +
+            "amount(${amount}), " +
+            "duration(${duration}), " +
+            "firmware(${firmware}), " +
+            "rssi(${rssi}), " +                     
+            "timeZone(${timeZone})"
+            )                  
+                            
+            break;      
+            
            
 		default:
             log.error "Unknown event received: $event"
@@ -434,6 +530,9 @@ def formatTimestamp(timestamp){
 }
 
 def reset(){    
+    state.remove("debug")
+    rememberState("debug", "true") 
+    
     state.remove("driver")
     rememberState("driver", clientVersion()) 
     state.remove("online")
@@ -475,6 +574,8 @@ def reset(){
     state.remove("dailyUsage")
     state.remove("temperature")
     state.remove("tz")
+    state.remove("screenDuration")
+    state.remove("screenMeterUnit")
       
     state.timestampFormat = "MM/dd/yyyy hh:mm:ss a" 
 
