@@ -15,11 +15,12 @@
  * 
  *  0.0.0: ALPHA release
  *  0.0.1: ALPHA release - Added "Report" message processing
+ *  0.0.2: ALPHA release - Added "getState" message processing
  */
 
 import groovy.json.JsonSlurper
 
-def clientVersion() {return "0.0.1"}
+def clientVersion() {return "0.0.2"}
 def copyright() {return "<br>© 2022-" + new Date().format("yyyy") + " Steven Barcus. All rights reserved."}
 def bold(text) {return "<strong>$text</strong>"}
 
@@ -170,6 +171,12 @@ def pollDevice(delay=1) {
     def date = new Date()  
     sendEvent(name:"lastPoll", value: date.format("MM/dd/yyyy hh:mm:ss a"), isStateChange:true)
  }
+
+/* Ignore user issued alarm settings */
+def both() {}
+def off() {}
+def siren() {}
+def strobe() {}
 
 def open () {
    setValve("open")   
@@ -362,7 +369,7 @@ def parseDevice(object) {
 "valve(${valve}), " +
 "meter(${meter}), " +
 "waterFlowing(${waterFlowing}), " +
-"openReminder(${openReminder}), " +
+"openReminderAlarm(${openReminderAlarm}), " +
 "leak(${leak}), " +
 "amountOverrun(${amountOverrun}), " +
 "durationOverrun(${durationOverrun}), " +
@@ -414,10 +421,10 @@ def void processStateData(payload) {
         
         switch(event) {
         case "Report": 
-//{"event":"WaterMeterController.Report","method":"Report","time":1728091761771,"msgid":"1728091761771","data":{"state":{"valve":"close","meter":41467},
-//"alarm":{"openReminder":false,"leak":false,"amountOverrun":false,"durationOverrun":false,"valveError":false,"reminder":false,"freezeError":false},"battery":4,"powerSupply":"battery","version":"0704",
-//"attributes":{"alertInterval":0,"screenDuration":5,"screenMeterUnit":0,"meterUnit":0,"meterStepFactor":10,"leakLimit":500,"leakPlan":"on","overrunAmount":1000,"overrunDuration":240},"recentUsage":{"amount":5,"duration":1},
-//"loraInfo":{"netId":"010201","devNetType":"A","signal":-35,"gatewayId":"d88b4c16040017c8","gateways":4}},"deviceId":"d88b4c010008440d"}        
+            //{"event":"WaterMeterController.Report","method":"Report","time":1728091761771,"msgid":"1728091761771","data":{"state":{"valve":"close","meter":41467},
+            //"alarm":{"openReminder":false,"leak":false,"amountOverrun":false,"durationOverrun":false,"valveError":false,"reminder":false,"freezeError":false},"battery":4,"powerSupply":"battery","version":"0704",
+            //"attributes":{"alertInterval":0,"screenDuration":5,"screenMeterUnit":0,"meterUnit":0,"meterStepFactor":10,"leakLimit":500,"leakPlan":"on","overrunAmount":1000,"overrunDuration":240},"recentUsage":{"amount":5,"duration":1},
+            //"loraInfo":{"netId":"010201","devNetType":"A","signal":-35,"gatewayId":"d88b4c16040017c8","gateways":4}},"deviceId":"d88b4c010008440d"}        
             def valve = object.data.state.valve                                  //Valve state, ["close","open"]
             def meter = object.data.state.meter                                  //Meter reading, Integer
             def openReminderAlarm = object.data.alarm.openReminder               //Open remind alarm, Boolean
@@ -427,7 +434,7 @@ def void processStateData(payload) {
             def valveError = object.data.alarm.valveError                        //Valve error alarm, Boolean
             def reminder = object.data.alarm.reminder                            //Remind repeat, Boolean
             def freezeError = object.data.alarm.freezeError                      //Freeze alarm, Boolean
-            def battery = parent.batterylevel(object.data.state.battery)         //Level of device's battery, 0 to 4 means empty to full 
+            def battery = parent.batterylevel(object.data.battery)               //Level of device's battery, 0 to 4 means empty to full 
             def powerSupply = object.data.powerSupply                            //Power supply, ["battery","PowerLine"]
             def alertInterval = object.data.attributes.alertInterval             //Alert interval in minute, Integer
             def screenDuration = object.data.attributes.screenDuration  
@@ -455,31 +462,24 @@ def void processStateData(payload) {
             rememberState("reminder", reminder)
             rememberState("freezeError", freezeError)
             rememberState("battery", battery)
-            rememberState("powerSupply", powerSupply)
-            rememberState("valveDelayOn", valveDelayOn)
-            rememberState("valveDelayOff", valveDelayOff)
-            rememberState("openReminder", openReminder)            
+            rememberState("powerSupply", powerSupply)          
             rememberState("screenDuration", screenDuration)
             rememberState("screenMeterUnit", screenMeterUnit)            
             rememberState("meterUnit", meterUnit)
             rememberState("alertInterval", alertInterval)
             rememberState("meterStepFactor", meterStepFactor)
             rememberState("leakLimit", leakLimit)
-            rememberState("autoCloseValve", autoCloseValve)
-            rememberState("overrunAmountACV", overrunAmountACV)
-            rememberState("overrunDurationACV", overrunDurationACV)
             rememberState("leakPlan", leakPlan)
             rememberState("overrunAmount", overrunAmount)
             rememberState("overrunDuration", overrunDuration)
             rememberState("amount", amount)
             rememberState("duration", duration)            
             rememberState("firmware", firmware)
-            rememberState("timeZone", timeZone)
                    
-            logDebug("processStateData() Parsed: " +
+            logDebug("processStateData('Report') Parsed: " +
             "valve(${valve}), " +
             "meter(${meter}), " + 
-            "openReminder(${openReminder}), " +
+            "openReminderAlarm(${openReminderAlarm}), " +
             "leak(${leak}), " +
             "amountOverrun(${amountOverrun}), " +
             "durationOverrun(${durationOverrun}), " +
@@ -488,14 +488,12 @@ def void processStateData(payload) {
             "freezeError(${freezeError}), " +
             "battery(${battery}), " +
             "powerSupply(${powerSupply}), " +
-            "openReminder(${openReminder}), " +
             "screenDuration(${screenDuration}), " +
             "screenMeterUnit(${screenMeterUnit}), " +
             "meterUnit(${meterUnit}), " +
             "alertInterval(${alertInterval}), " +
             "meterStepFactor(${meterStepFactor}), " +
             "leakLimit(${leakLimit}), " +
-            "autoCloseValve(${autoCloseValve}), " +
             "overrunAmountACV(${overrunAmountACV}), " +
             "overrunDurationACV(${overrunDurationACV}), " +
             "leakPlan(${leakPlan}), " +
@@ -504,11 +502,94 @@ def void processStateData(payload) {
             "amount(${amount}), " +
             "duration(${duration}), " +
             "firmware(${firmware}), " +
-            "rssi(${rssi}), " +                     
-            "timeZone(${timeZone})"
+            "rssi(${rssi})"
             )                  
                             
             break;      
+            
+        case "getState": 
+            //data":{"state":{"valve":"close","meter":42164},"alarm":{"openReminder":false,"leak":false,"amountOverrun":false,"durationOverrun":false,"valveError":false,"reminder":false,"freezeError":false},"battery":4,
+            //"powerSupply":"battery","version":"0704","attributes":{"alertInterval":0,"screenDuration":5,"screenMeterUnit":0,"meterUnit":0,"meterStepFactor":10,"leakLimit":500,"leakPlan":"on",
+            //"overrunAmount":1000,"overrunDuration":240},"recentUsage":{"amount":32,"duration":2},"loraInfo":{"netId":"010201","devNetType":"A","signal":-43,"gatewayId":"d88b4c160303f9a6","gateways":4}},"deviceId":"d88b4c010008440d"}      
+            def valve = object.data.state.valve                                  //Valve state, ["close","open"]
+            def meter = object.data.state.meter                                  //Meter reading, Integer
+            def openReminderAlarm = object.data.alarm.openReminder               //Open remind alarm, Boolean
+            def leak = object.data.alarm.leak                                    //Leak alarm, Boolean
+            def amountOverrun = object.data.alarm.amountOverrun                  //Amount overrun alarm, Boolean
+            def durationOverrun = object.data.alarm.durationOverrun              //Duration overrun alarm, Boolean
+            def valveError = object.data.alarm.valveError                        //Valve error alarm, Boolean
+            def reminder = object.data.alarm.reminder                            //Remind repeat, Boolean
+            def freezeError = object.data.alarm.freezeError                      //Freeze alarm, Boolean
+            def battery = parent.batterylevel(object.data.battery)               //Level of device's battery, 0 to 4 means empty to full 
+            def powerSupply = object.data.powerSupply                            //Power supply, ["battery","PowerLine"]
+            def alertInterval = object.data.attributes.alertInterval             //Alert interval in minute, Integer
+            def screenDuration = object.data.attributes.screenDuration  
+            def screenMeterUnit = object.data.attributes.screenMeterUnit 
+            def meterUnit = object.data.attributes.meterUnit       
+            def meterStepFactor = object.data.attributes.meterStepFactor         //Meter measurement accuracy, Integer
+            def leakLimit = object.data.attributes.leakLimit                     //Leak limit in meter unit, Float
+            def leakPlan = object.data.attributes.leakPlan                       //Leak plan mode, ["on","off","schedule"]
+            def overrunAmount = object.data.attributes.overrunAmount             //Overrun amount in meter unit, Float
+            def overrunDuration = object.data.attributes.overrunDuration         //Overrun duration in minute, Integer
+            def amount = object.data.recentUsage.amount                          //Recent usage in meter unit, Integer
+            def duration = object.data.recentUsage.duration                      //Recent usage duration in minute, Integer
+            def firmware = object.data.version.toUpperCase()                     //Firmware version  
+            
+            def rssi = object.data.loraInfo.signal
+            fmtSignal(rssi)  
+
+            rememberState("valve", valve)
+            rememberState("meter", meter)
+            rememberState("openReminderAlarm", openReminderAlarm)
+            rememberState("leak", leak)
+            rememberState("amountOverrun", amountOverrun)
+            rememberState("durationOverrun", durationOverrun)
+            rememberState("valveError", valveError)
+            rememberState("reminder", reminder)
+            rememberState("freezeError", freezeError)
+            rememberState("battery", battery)
+            rememberState("powerSupply", powerSupply)     
+            rememberState("screenDuration", screenDuration)
+            rememberState("screenMeterUnit", screenMeterUnit)            
+            rememberState("meterUnit", meterUnit)
+            rememberState("alertInterval", alertInterval)
+            rememberState("meterStepFactor", meterStepFactor)
+            rememberState("leakLimit", leakLimit)
+            rememberState("leakPlan", leakPlan)
+            rememberState("overrunAmount", overrunAmount)
+            rememberState("overrunDuration", overrunDuration)
+            rememberState("amount", amount)
+            rememberState("duration", duration)            
+            rememberState("firmware", firmware)
+                   
+            logDebug("processStateData('getState') Parsed: " +
+            "valve(${valve}), " +
+            "meter(${meter}), " + 
+            "openReminderAlarm(${openReminderAlarm}), " +
+            "leak(${leak}), " +
+            "amountOverrun(${amountOverrun}), " +
+            "durationOverrun(${durationOverrun}), " +
+            "valveError(${valveError}), " +
+            "reminder(${reminder}), " +
+            "freezeError(${freezeError}), " +
+            "battery(${battery}), " +
+            "powerSupply(${powerSupply}), " +
+            "screenDuration(${screenDuration}), " +
+            "screenMeterUnit(${screenMeterUnit}), " +
+            "meterUnit(${meterUnit}), " +
+            "alertInterval(${alertInterval}), " +
+            "meterStepFactor(${meterStepFactor}), " +
+            "leakLimit(${leakLimit}), " +
+            "leakPlan(${leakPlan}), " +
+            "overrunAmount(${overrunAmount}), " +
+            "overrunDuration(${overrunDuration}), " +
+            "amount(${amount}), " +
+            "duration(${duration}), " +
+            "firmware(${firmware}), " +
+            "rssi(${rssi})"
+            )                  
+                            
+            break;    
             
            
 		default:
@@ -547,7 +628,7 @@ def reset(){
     state.remove("valve")
     state.remove("meter")
     state.remove("waterFlowing")
-    state.remove("openReminder")
+    state.remove("openReminderAlarm")
     state.remove("leak")
     state.remove("amountOverrun")
     state.remove("durationOverrun")
